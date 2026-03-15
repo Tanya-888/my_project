@@ -130,6 +130,7 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'shop/static')]
 
 # Redis URL
 CELERY_BROKER_URL = 'redis://redis:6379/0'

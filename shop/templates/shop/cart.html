@@ -1,13 +1,6 @@
-<h1>Ваша корзина</h1>
+{% extends 'shop/base.html' %}
 
-{% if cart_items %}
-  <ul>
-    {% for item in cart_items %}
-      <li>{{ item.product.name }} - {{ item.quantity }} шт.</li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>Корзина пуста.</p>
-{% endif %}
+{% block content %}
+<h2>Корзина</h2>
 
-<a href="{% url 'product_list' %}">Вернуться к списку товаров</a>
+{% endblock %}
