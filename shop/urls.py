@@ -1,11 +1,28 @@
-
 from django.urls import path
-from . import views
+from django.http import HttpResponse
+from .views import ProductListAPIView, ProductDetailAPIView, CartAPIView, CheckoutAPIView
+
+def api_root(request):
+    html = """
+    <html>
+        <head><title>Интернет магазин</title></head>
+        <body>
+            <h1>Интернет магазин</h1>
+            <p>Добро пожаловать в API нашего Интернет магазина.</p>
+            <ul>
+                <li><a href="/api/products/">Товары</a></li>
+                <li><a href="/api/cart/">Корзина</a></li>
+                <li><a href="/api/checkout/">Оформление заказа</a></li>
+            </ul>
+        </body>
+    </html>
+    """
+    return HttpResponse(html)
 
 urlpatterns = [
-    path('', views.product_list, name='product_list'),
-    path('product/<int:pk>/', views.product_detail, name='product_detail'),
-    path('add-to-cart/<int:pk>/', views.add_to_cart, name='add_to_cart'),
-    path('cart/', views.view_cart, name='view_cart'),
-    path('checkout/', views.checkout, name='checkout'),
+    path('', api_root),
+    path('products/', ProductListAPIView.as_view(), name='product-list'),
+    path('products/<int:pk>/', ProductDetailAPIView.as_view(), name='product-detail'),
+    path('cart/', CartAPIView.as_view(), name='cart'),
+    path('checkout/', CheckoutAPIView.as_view(), name='checkout'),
 ]

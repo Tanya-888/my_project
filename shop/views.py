@@ -1,44 +1,72 @@
 # Create your views here.
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from rest_framework import generics, permissions
 from .models import Product, Order, OrderItem
+from .serializers import ProductSerializer, OrderSerializer, OrderItemSerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import status
 
-def product_list(request):
-    products = Product.objects.all()
-    return render(request, 'shop/product_list.html', {'products': products})
+class ProductListAPIView(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-def product_detail(request, pk):
-    product = get_object_or_404(Product, pk=pk)
-    return render(request, 'shop/product_detail.html', {'product': product})
+class ProductDetailAPIView(generics.RetrieveAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-@login_required
-def add_to_cart(request, pk):
-    product = get_object_or_404(Product, pk=pk)
-    cart = request.session.get('cart', {})
-    cart[str(pk)] = cart.get(str(pk), 0) + 1
-    request.session['cart'] = cart
-    return redirect('product_detail', pk=pk)
+class CartAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-@login_required
-def view_cart(request):
-    cart = request.session.get('cart', {})
-    products = []
-    total = 0
-    for pk, qty in cart.items():
-        prod = get_object_or_404(Product, pk=int(pk))
-        products.append({'product': prod, 'quantity': qty})
-        total += prod.price * qty
-    return render(request, 'shop/cart.html', {'products': products, 'total': total})
+    def get(self, request):
+        # корзина хранится во временной сессии (не идеально для API, но для примера)
+        cart = request.session.get('cart', {})
+        products = []
+        total = 0
+        for pk, qty in cart.items():
+            try:
+                product = Product.objects.get(pk=int(pk))
+                product_data = ProductSerializer(product).data
+                product_data['quantity'] = qty
+                products.append(product_data)
+                total += product.price * qty
+            except Product.DoesNotExist:
+                continue
+        return Response({'products': products, 'total': total})
 
-@login_required
-def checkout(request):
-    cart = request.session.get('cart', {})
-    if not cart:
-        return redirect('product_list')
-    order = Order.objects.create(user=request.user)
-    for pk, qty in cart.items():
-        product = get_object_or_404(Product, pk=int(pk))
-        OrderItem.objects.create(order=order, product=product, quantity=qty)
-    request.session['cart'] = {}
-    return render(request, 'shop/order.html', {'order': order})
+    def post(self, request):
+        # Добавить товар в корзину: ожидается JSON {"product_id": int, "quantity": int}
+        product_id = request.data.get('product_id')
+        quantity = request.data.get('quantity', 1)
+        if not product_id:
+            return Response({'error': 'product_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        cart = request.session.get('cart', {})
+        cart[str(product_id)] = cart.get(str(product_id), 0) + quantity
+        request.session['cart'] = cart
+        return Response({'message': 'Добавлено в корзину'}, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        # Очистить корзину
+        request.session['cart'] = {}
+        return Response({'message': 'Корзина очищена'}, status=status.HTTP_200_OK)
+
+class CheckoutAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        cart = request.session.get('cart', {})
+        if not cart:
+            return Response({'error': 'Корзина пуста'}, status=status.HTTP_400_BAD_REQUEST)
+
+        order = Order.objects.create(user=request.user)
+        for pk, qty in cart.items():
+            try:
+                product = Product.objects.get(pk=int(pk))
+                OrderItem.objects.create(order=order, product=product, quantity=qty)
+            except Product.DoesNotExist:
+                continue
+        # Очистим корзину после оформления заказа
+        request.session['cart'] = {}
+
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
