@@ -130,7 +130,7 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'shop' / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 
 # Redis URL
