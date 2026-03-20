@@ -8,7 +8,7 @@ def api_root(request):
         <head><title>Интернет магазин</title></head>
         <body>
             <h1>Интернет магазин</h1>
-            <p>Добро пожаловать в API нашего Интернет магазина.</p>
+            <p>Добро пожаловать в Интернет магазин.</p>
             <ul>
                 <li><a href="/api/products/">Товары</a></li>
                 <li><a href="/api/cart/">Корзина</a></li>
